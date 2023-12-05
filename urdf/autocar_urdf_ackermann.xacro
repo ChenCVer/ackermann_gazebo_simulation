@@ -1,0 +1,704 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-1-g15f4949  Build Version: 1.6.7594.29634
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot name="Argus_Hunter_2" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="VISUAL_DIR" value="/home/jiaozhu/Documents/code/ros2_dev_ws/src/argus_gazebo_simulation/meshes/visual"/>
+  <xacro:property name="wheel_width" value="0.14"/>
+  <xacro:property name="wheel_radius" value="0.165"/>
+
+  <xacro:macro name="wheel" params="prefix">
+    <link name="${prefix}_wheel">
+      <inertial>
+        <origin
+          xyz="0 0.0016115 0"
+          rpy="0 0 0" />
+        <mass value="2.5" />
+        <inertia
+          ixx="0.06368"
+          ixy="0"
+          ixz="0"
+          iyy="0.11064"
+          iyz="0"
+          izz="0.06368" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="${VISUAL_DIR}/${prefix}_wheel.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="0.24314 0.51765 0.9451 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
+        <geometry>
+          <!-- SHOULD use cylinder as collision, otherwise ackermann_driver will failed silently -->
+          <cylinder length="${wheel_width}" radius="${wheel_radius}"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="gazebo_wheel" params="prefix mu1 mu2 kp kd">
+    <gazebo reference="${prefix}_wheel">
+      <!-- <turnGravityOff>false </turnGravityOff>   -->
+      <material>Gazebo/DarkGrey</material>
+      <mu1 value="${mu1}"/>
+      <mu2 value="${mu2}"/>
+      <kp  value="${kp}" />
+      <kd  value="${kd}" />
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="steering_link" params="prefix">
+    <link name="${prefix}_steering_link">
+      <inertial>
+        <origin
+          xyz="0 0.023901 -0.02621"
+          rpy="0 0 0" />
+        <mass value="0.054143" />
+        <inertia
+          ixx="0.001"
+          ixy="0"
+          ixz="0"
+          iyy="0.001"
+          iyz="0"
+          izz="0.001" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="${VISUAL_DIR}/${prefix}_steering.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="0.79216 0.81961 0.93333 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="${VISUAL_DIR}/${prefix}_steering.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="steering_joint" params="prefix x y z">
+    <joint name="${prefix}_steering_joint" type="revolute">
+      <origin
+        xyz="${x} ${y} ${z}"
+        rpy="0 0 0" />
+      <parent link="frame_link" />
+      <child link="${prefix}_steering_link" />
+      <dynamics damping="0.5" friction="0.01"/>
+      <axis xyz="0 0 1" />
+      <limit lower="-0.575" upper="0.575" effort="1000" velocity="100"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="front_wheel_joint" params="prefix x y z rz yaxis">
+    <joint name="front_${prefix}_wheel_joint" type="continuous">
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 ${rz}" />
+      <parent link="front_${prefix}_steering_link" />
+      <child link="front_${prefix}_wheel" />    
+      <dynamics damping="0.1" friction="0.1"/>
+      <axis xyz="0 ${yaxis} 0" />
+      <limit effort="1000.0" velocity="100"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rear_wheel_joint" params="prefix x y z rz yaxis">
+    <joint name="rear_${prefix}_wheel_joint" type="continuous">
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 ${rz}" />
+      <parent link="frame_link" />
+      <child link="rear_${prefix}_wheel" />
+      <dynamics damping="0.1" friction="0.1"/>
+      <axis xyz="0 ${yaxis} 0" />
+      <limit effort="1000.0" velocity="500.0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="sonar_link" params="prefix">
+    <link name="${prefix}_sonar_link">
+      <inertial>
+        <origin
+          xyz="-0.01108 0 0.0015365"
+          rpy="0 0 0" />
+        <mass value="0.02" />
+        <inertia
+          ixx="1e-4"
+          ixy="0"
+          ixz="0"
+          iyy="1e-4"
+          iyz="0"
+          izz="1e-4" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="${VISUAL_DIR}/sonar.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="0.46275 0.46275 0.45882 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="${VISUAL_DIR}/sonar.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="sonar_link_joint" params="prefix x y z sign parent_link">
+    <joint name="${prefix}_sonar_link_joint" type="fixed">
+      <origin
+        xyz="${x} ${y} ${z}"
+        rpy="0 0 ${sign * pi} " />
+      <parent link="${parent_link}" />
+      <child link="${prefix}_sonar_link" />
+      <axis xyz="0 0 0" />
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rgb_camera" params="prefix">
+    <link name="${prefix}_camera_link">
+      <inertial>
+        <origin
+          xyz="-0.025397 0.00018743 0"
+          rpy="0 0 0" />
+        <mass value="0.05" />
+        <inertia
+          ixx="1e-4"
+          ixy="0"
+          ixz="0"
+          iyy="1e-4"
+          iyz="0"
+          izz="1e-4" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="${VISUAL_DIR}/camera.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="0.79216 0.81961 0.93333 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="${VISUAL_DIR}/camera.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="rgb_camera_joint" params="prefix x y z dir parent_link">
+    <joint name="${prefix}_camera_link_joint" type="fixed">
+      <origin
+        xyz="${x} ${y} ${z}"
+        rpy="0 0 ${dir * pi / 2}" />
+      <parent link="${parent_link}" />
+      <child link="${prefix}_camera_link" />
+      <axis xyz="0 0 1" />
+    </joint>
+  </xacro:macro>
+
+  <!-- Macro for gmsl rgb camera sensor -->
+  <xacro:macro name="rgb_camera_gazebo" params="prefix">
+    <gazebo reference="${prefix}_camera_link">
+        <material>Gazebo/Black</material>
+    </gazebo>
+
+    <gazebo reference="${prefix}_camera_link">
+        <sensor type="camera" name="camera_node">
+            <update_rate>30.0</update_rate>
+            <camera name="${prefix}">
+              <horizontal_fov>2.059488</horizontal_fov> <!-- 水平FOV，以弧度为单位 -->
+              <vertical_fov>1.082</vertical_fov>     <!-- 垂直FOV，以弧度为单位 -->
+                <image>
+                    <width>1920</width>
+                    <height>1080</height>
+                    <format>R8G8B8</format>
+                </image>
+                <clip>
+                    <near>0.02</near>
+                    <far>300</far>
+                </clip>
+                <noise>
+                    <type>gaussian</type>
+                    <mean>0.0</mean>
+                    <stddev>0.007</stddev>
+                </noise>
+            </camera>
+          
+          <plugin name="${prefix}_camera" filename="libgazebo_ros_camera.so">
+            <image_topic_name>image_raw</image_topic_name>
+            <camera_info_topic_name>camera_info</camera_info_topic_name>
+            <camera_name>${prefix}_color_camera</camera_name>
+            <frame_name>${prefix}_camera</frame_name>
+            <hack_baseline>0.2</hack_baseline>
+          </plugin>
+        </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <link name="dummy_base">
+  </link>
+
+  <joint name="dummy_base_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="dummy_base"/>
+    <child link="frame_link"/>
+    <axis xyz="0 0 1" />
+  </joint>
+
+  <link name="frame_link">
+    <inertial>
+      <origin
+        xyz="0.0075625 -0.0046146 -0.13361"
+        rpy="0 0 0" />
+      <mass value="75"/>
+      <inertia
+        ixx="0.031279"
+        ixy="0"
+        ixz="0"
+        iyy="0.098367"
+        iyz="0"
+        izz="0.11285" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="${VISUAL_DIR}/chassis_and_frame.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="${VISUAL_DIR}/chassis_and_frame.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="bracket_link">
+  </link>
+
+  <xacro:steering_link prefix="front_left"/>
+  <xacro:steering_link prefix="front_right"/>
+
+  <xacro:wheel prefix="front_left"/>
+  <xacro:wheel prefix="front_right"/>
+  <xacro:wheel prefix="rear_left"/>
+  <xacro:wheel prefix="rear_right"/>
+
+  <xacro:front_wheel_joint prefix="left" x="0" y="0.066" z="-0.026" rz="0" yaxis="1"/>
+  <xacro:front_wheel_joint prefix="right" x="0" y="-0.066" z="-0.026" rz="0" yaxis="1"/>
+
+  <xacro:steering_joint prefix="front_left" x="0.37142" y="0.234" z="-0.1695"/>
+  <xacro:steering_joint prefix="front_right" x="0.37142" y="-0.234" z="-0.1695"/>
+
+  <link name="steering">
+  </link>
+  <joint name="steering_joint" type="continuous">
+    <origin xyz="0.37142 0 -0.1695" rpy="0 0 0"/>
+    <parent link="frame_link"/>
+    <child link="steering"/>
+    <axis xyz="0 0 1" />
+  </joint>
+
+  <xacro:rear_wheel_joint prefix="left" x="-0.28" y="0.29" z="-0.1955" rz="0" yaxis="1"/>
+  <xacro:rear_wheel_joint prefix="right" x="-0.28" y="-0.29" z="-0.1955" rz="0" yaxis="1"/>
+  
+
+  <!-- virtual link -->
+  <joint name="bracket_link_fix" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="frame_link" />
+    <child link="bracket_link" />
+    <axis xyz="0 0 1" />
+  </joint>
+ 
+
+  <xacro:sonar_link prefix="front"/>
+  <xacro:sonar_link prefix="rear"/>
+
+  <xacro:sonar_link_joint prefix="front" x="0.39" y="0" z="0.067054" sign="0" parent_link="bracket_link"/>
+  <xacro:sonar_link_joint prefix="rear" x="-0.31" y="0" z="0.067054" sign="1" parent_link="bracket_link"/>
+
+  <link name="depth_camera_link">
+    <inertial>
+      <origin
+        xyz="0.011882 0.00028133 0"
+        rpy="0 0 0" />
+      <mass value="0.31104" />
+      <inertia
+        ixx="1e-3"
+        ixy="0"
+        ixz="0"
+        iyy="1e-3"
+        iyz="0"
+        izz="1e-3" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="${VISUAL_DIR}/depth_camera.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="${VISUAL_DIR}/depth_camera.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="depth_camera_joint" type="fixed">
+    <origin
+      xyz="0.40492 0 0.1535"
+      rpy="0 0 0" />
+    <parent link="bracket_link" />
+    <child link="depth_camera_link" />
+    <axis xyz="0 0 1" />
+  </joint>
+
+  <xacro:rgb_camera prefix="front"/>
+  <xacro:rgb_camera prefix="rear"/>
+  <xacro:rgb_camera prefix="left"/>
+  <xacro:rgb_camera prefix="right"/>
+
+  <xacro:rgb_camera_joint prefix="front" x="0.395" y="0" z="0.76" dir="0" parent_link="bracket_link"/>
+  <xacro:rgb_camera_joint prefix="right" x="0" y="0.23" z="0.76" dir="1" parent_link="bracket_link"/>
+  <xacro:rgb_camera_joint prefix="rear" x="-0.315" y="0" z="0.76" dir="2" parent_link="bracket_link"/>
+  <xacro:rgb_camera_joint prefix="left" x="0" y="-0.23" z="0.76" dir="3" parent_link="bracket_link"/>
+
+  <link name="lidar_link">
+    <inertial>
+      <origin
+        xyz="0 0 0.036317"
+        rpy="0 0 0" />
+      <mass value="0.9" />
+      <inertia
+        ixx="4.1797E-05"
+        ixy="0"
+        ixz="0"
+        iyy="4.1797E-05"
+        iyz="0"
+        izz="6.1861E-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="${VISUAL_DIR}/lidar.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.082353 0.082353 0.082353 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="${VISUAL_DIR}/lidar.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- LiDAR -->
+  <joint name="lidar_link_joint" type="fixed">
+    <origin
+      xyz="0.04 0 0.9656"
+      rpy="0 0 0" />
+    <parent link="bracket_link" />
+    <child link="lidar_link" />
+    <axis xyz="0 0 -1" />
+  </joint>
+
+  <!-- gazebo plugin gravity color -->
+  <gazebo reference="frame_link">
+    <mu1 value="0.1"/>
+    <mu2 value="0.1"/>
+    <!-- <turnGravityOff>false </turnGravityOff> -->
+    <material>Gazebo/White</material>
+  </gazebo>
+
+  <!-- gazebo plugin gravity color -->
+  <gazebo reference="bracket_link">
+    <!-- <turnGravityOff>true </turnGravityOff> -->
+    <material>Gazebo/White</material>
+  </gazebo>
+
+  <xacro:gazebo_wheel prefix="front_left" mu1="1.0" mu2="1.0" kp="1e8" kd="1.0"/>
+  <xacro:gazebo_wheel prefix="front_right" mu1="1.0" mu2="1.0" kp="1e8" kd="1.0"/>
+  <xacro:gazebo_wheel prefix="rear_left" mu1="1.0" mu2="1.0" kp="1e8" kd="1.0"/>
+  <xacro:gazebo_wheel prefix="rear_right" mu1="1.0" mu2="1.0" kp="1e8" kd="1.0"/>
+
+  <!-- ackmann driver model -->
+  <gazebo>
+    <plugin name="gazebo_ros_ackermann_drive" filename="libgazebo_ros_ackermann_drive.so">
+      <ros>
+        <namespace>/orbbec_hunter2</namespace>
+        <remapping> cmd_vel:=cmd_vel </remapping>
+        <remapping> odom:=odom </remapping>
+        <remapping> distance:=distance </remapping>
+      </ros>
+
+      <update_rate>50.0</update_rate>
+
+      <!-- wheels -->
+      <front_left_joint>front_left_wheel_joint</front_left_joint>
+      <front_right_joint>front_right_wheel_joint</front_right_joint>
+      <rear_left_joint>rear_left_wheel_joint</rear_left_joint>
+      <rear_right_joint>rear_right_wheel_joint</rear_right_joint>
+
+      <!-- steering joints -->
+      <left_steering_joint>front_left_steering_joint</left_steering_joint>
+      <right_steering_joint>front_right_steering_joint</right_steering_joint>
+      <steering_wheel_joint>steering_joint </steering_wheel_joint>
+
+      <!-- Other parameters remain the same -->
+      <max_steer>0.6458</max_steer>
+      <max_steering_angle>7.85</max_steering_angle>
+      <max_speed>20</max_speed>
+
+      <!-- PID tuning -->
+      <left_steering_pid_gain>1500 0 1</left_steering_pid_gain>
+      <left_steering_i_range>0 0</left_steering_i_range>
+      <right_steering_pid_gain>1500 0 1</right_steering_pid_gain>
+      <right_steering_i_range>0 0</right_steering_i_range>
+      <linear_velocity_pid_gain>1000 0 1</linear_velocity_pid_gain>
+      <linear_velocity_i_range>0 0</linear_velocity_i_range>
+
+      <!-- output -->
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
+      <publish_distance>true</publish_distance>
+
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>frame_link</robot_base_frame>
+    </plugin>
+  </gazebo>
+
+  <!-- laser sensor -->
+  <gazebo reference="lidar_link">
+      <material>Gazebo/Black</material>
+      <sensor type="ray" name="rplidar">
+          <pose>0 0 0 0 0 0</pose>
+          <visualize>true</visualize>
+          <update_rate>5.5</update_rate>
+          <ray>
+              <scan>
+                <horizontal>
+                  <samples>360</samples>
+                  <resolution>1</resolution>
+                  <min_angle>-3</min_angle>
+                  <max_angle>3</max_angle>
+                </horizontal>
+              </scan>
+              <range>
+                <min>0.10</min>
+                <max>6.0</max>
+                <resolution>0.01</resolution>
+              </range>
+              <noise>
+                <type>gaussian</type>
+                <mean>0.0</mean>
+                <stddev>0.01</stddev>
+              </noise>
+          </ray>
+          <plugin name="gazebo_rplidar" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <remapping> ~/out:=scan </remapping>
+          </ros>
+              <laser_topic_name>scan</laser_topic_name>
+              <frame_name>lidar</frame_name>
+              <output_type>sensor_msgs/LaserScan</output_type>
+          </plugin>
+      </sensor>
+  </gazebo>
+
+
+  <!-- color camera sensor -->
+  <xacro:rgb_camera_gazebo prefix="front"/>
+  <xacro:rgb_camera_gazebo prefix="left"/>
+  <xacro:rgb_camera_gazebo prefix="rear"/>
+  <xacro:rgb_camera_gazebo prefix="right"/>
+
+  <!-- imu sensor-->
+  <gazebo reference="depth_camera_link">
+    <material>Gazebo/Black</material>
+    <sensor name="imu_sensor" type="imu">
+      <plugin filename="libgazebo_ros_imu_sensor.so" name="imu_plugin">
+        <ros>
+          <remapping>~/out:=imu</remapping>
+        </ros>
+        <initial_orientation_as_reference>false</initial_orientation_as_reference>
+      </plugin>
+
+      <always_on>true</always_on>
+      <update_rate>60</update_rate>
+      <visualize>true</visualize>
+      <imu>
+        <angular_velocity>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+              <bias_mean>0.0000075</bias_mean>
+              <bias_stddev>0.0000008</bias_stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+              <bias_mean>0.0000075</bias_mean>
+              <bias_stddev>0.0000008</bias_stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+              <bias_mean>0.0000075</bias_mean>
+              <bias_stddev>0.0000008</bias_stddev>
+            </noise>
+          </z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+              <bias_mean>0.1</bias_mean>
+              <bias_stddev>0.001</bias_stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+              <bias_mean>0.1</bias_mean>
+              <bias_stddev>0.001</bias_stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+              <bias_mean>0.1</bias_mean>
+              <bias_stddev>0.001</bias_stddev>
+            </noise>
+          </z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
+  <!-- depth camera sensor -->
+  <gazebo reference="depth_camera_link">
+    <sensor type="depth" name="kinect">
+        <always_on>true</always_on>
+        <update_rate>15.0</update_rate>
+        <pose>0 0 0 0 0 0</pose>
+        <camera name="kinect">
+            <horizontal_fov>1.587</horizontal_fov>
+            <vertical_fov>1.15</vertical_fov>             
+            <image>
+                <format>R8G8B8</format>
+                <width>1280</width>
+                <height>800</height>
+            </image>
+            <clip>
+                <near>0.05</near>
+                <far>10.0</far>
+            </clip>
+        </camera>
+        <plugin name="kinect_controller" filename="libgazebo_ros_camera.so">
+          <ros>
+            <remapping>depth_camera/image_raw:=rgb/image_raw</remapping>
+            <remapping>depth_camera/image_depth:=depth/image_raw</remapping>
+            <remapping>depth_camera/camera_info:=rgb/camera_info</remapping>
+            <remapping>depth_camera/camera_info_depth:=depth/camera_info</remapping>
+            <remapping>depth_camera/points:=depth/points</remapping>
+          </ros>
+          <camera_name>front_depth_camera</camera_name>
+          <frame_name>depth_camera_link</frame_name>
+          <hack_baseline>0.07</hack_baseline>
+          <min_depth>0.001</min_depth>
+          <max_depth>300.0</max_depth>
+        </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- front super wave sensor -->
+  <xacro:macro name="sonar_gazebo" params="prefix">
+    <gazebo reference="${prefix}_sonar_link">
+      <material>Gazebo/Black</material>
+      <sensor type="ray" name="${prefix}_ultrasonic_sensor">
+        <pose>0 0 0 0 0 0</pose>
+        <!-- 是否可视化，gazebo里能不能看到 -->
+        <visualize>true</visualize>
+        <!-- 扫描速率，也就是数据更新速率 -->
+        <update_rate>20</update_rate>
+        <ray>
+          <scan>
+            <!-- 水平扫描的点数 -->
+            <horizontal>
+              <samples>30</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.523</min_angle>
+              <max_angle>0.523</max_angle>
+            </horizontal>
+            <!-- 垂直方向扫描的点数 -->
+            <vertical>
+              <samples>5</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.523</min_angle>
+              <max_angle>0.523</max_angle>
+            </vertical>
+          </scan>
+          <!-- 超声波检测的范围和数据分辨率单位m -->
+          <range>
+            <min>0.025</min>
+            <max>0.45</max>
+            <resolution>0.001</resolution>
+          </range>
+          <!-- 数据噪声采用高斯噪声 -->
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.01</stddev>
+          </noise>
+        </ray>
+        <plugin name="${prefix}_ultrasonic_sensor_controller" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <!-- 重映射输出的话题名称 -->
+            <remapping>~/out:=${prefix}_ultrasonic</remapping>
+          </ros>
+          <!-- 输出消息的类型，注意与雷达区分，这里是sensor_msgs/Range -->
+          <output_type>sensor_msgs/Range</output_type>
+          <!-- 射线类型，这里要写ultrasound，注意和雷达区分 -->
+          <radiation_type>ultrasound</radiation_type>
+          <!-- frame名称，填写link名称即可 -->
+          <frame_name>${prefix}_sonar_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:sonar_gazebo prefix="front"/>
+  <xacro:sonar_gazebo prefix="rear"/>
+</robot>
